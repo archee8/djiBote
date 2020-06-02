@@ -4,21 +4,14 @@ package com.ielson.djiBote;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
-import org.ros.concurrent.CancellableLoop;
-import org.ros.message.Time;
 import org.ros.namespace.GraphName;
 import org.ros.node.AbstractNodeMain;
 import org.ros.node.ConnectedNode;
-import org.ros.node.NodeMain;
 import org.ros.node.topic.Publisher;
 
 import dji.common.flightcontroller.FlightControllerState;
-import dji.midware.data.model.P3.DataFlycGetPushFlightRecord;
 import geometry_msgs.Point;
-import geometry_msgs.Pose;
-import geometry_msgs.Quaternion;
 import std_msgs.Int32;
 import sensor_msgs.Image;
 import std_msgs.Header;
@@ -113,7 +106,7 @@ public class Talker extends AbstractNodeMain {
                         zVelocity = flightControllerState.getVelocityZ();
 
 
-                        MainActivity.mTextView.setText("Yaw : " + String.format("%.2f", yaw) + ", Pitch : " + String.format("%.2f", pitch) + ", Roll : " + String.format("%.2f", roll) + "\n" +
+                        MainActivity.mdroneInfoTextView.setText("Yaw : " + String.format("%.2f", yaw) + ", Pitch : " + String.format("%.2f", pitch) + ", Roll : " + String.format("%.2f", roll) + "\n" +
                                 ", PosX : " + String.format("%.2f", positionX) + ", PosY : " + String.format("%.2f", positionY) + ", PosZ : " + String.format("%.2f", positionZ));
                         Point pos = posPublisher.newMessage();
                         pos.setX(positionX);
