@@ -1,45 +1,25 @@
 package com.ielson.djiBote;
 
-import android.app.Activity;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.ImageFormat;
-import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
-import android.graphics.YuvImage;
 import android.os.Bundle;
-import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
-import android.support.annotation.NonNull;
-import android.support.design.widget.FloatingActionButton;
-import android.support.design.widget.Snackbar;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.Toolbar;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CompoundButton;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ToggleButton;
 
-import com.ielson.djiBote.media.DJIVideoStreamDecoder;
-import com.ielson.djiBote.media.NativeHelper;
+import com.dji.videostreamdecodingsample.media.DJIVideoStreamDecoder;
+import com.dji.videostreamdecodingsample.media.NativeHelper;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
-import dji.common.flightcontroller.FlightControllerState;
 import dji.common.flightcontroller.virtualstick.FlightControlData;
 import dji.common.product.Model;
 import dji.common.util.CommonCallbacks;
@@ -50,19 +30,12 @@ import dji.sdk.codec.DJICodecManager;
 import dji.sdk.flightcontroller.FlightController;
 import dji.sdk.products.Aircraft;
 import dji.common.error.DJIError;
-import geometry_msgs.Point;
 
 
 import org.ros.EnvironmentVariables;
-import org.ros.android.MessageCallable;
 import org.ros.android.RosActivity;
-import org.ros.android.view.RosTextView;
-import org.ros.internal.node.server.master.MasterRegistrationListener;
-import org.ros.master.client.MasterStateClient;
-import org.ros.master.client.SystemState;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMainExecutor;
-
 
 
 public class MainActivity extends RosActivity implements TextureView.SurfaceTextureListener, View.OnClickListener, DJIVideoStreamDecoder.IYuvDataListener {
