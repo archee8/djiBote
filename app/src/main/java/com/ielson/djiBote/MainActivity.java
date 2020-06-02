@@ -18,6 +18,8 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.util.Log;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import android.view.TextureView;
 import android.view.View;
 import android.widget.Button;
@@ -27,6 +29,7 @@ import android.widget.Toast;
 import android.widget.ToggleButton;
 
 import com.ielson.djiBote.media.DJIVideoStreamDecoder;
+import com.ielson.djiBote.media.NativeHelper;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -64,7 +67,8 @@ import org.ros.node.NodeMainExecutor;
 
 public class MainActivity extends RosActivity implements TextureView.SurfaceTextureListener, View.OnClickListener, DJIVideoStreamDecoder.IYuvDataListener {
 
-    protected TextureView mVideoSurface = null;
+    protected SurfaceView mVideoSurface = null;
+    private SurfaceHolder mVideoSurfaceHolder;
     private Button mLandBtn, mTakeOffBtn;
     private static final String TAG = MainActivity.class.getName();
     protected VideoFeeder.VideoDataCallback mReceivedVideoDataCallBack = null;
@@ -99,6 +103,9 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        NativeHelper.getInstance().init();
+
         setContentView(R.layout.activity_main);
         initUI();
         // The callback for receiving the raw H264 video data for camera live view
@@ -166,9 +173,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
         if (product == null || !product.isConnected()) {
             Toast.makeText(this, getString(R.string.disconnected), Toast.LENGTH_SHORT).show();
         } else {
-            if (null != mVideoSurface) {
-                mVideoSurface.setSurfaceTextureListener(this);
-            }
+            DJIVideoStreamDecoder.getInstance().resume();
             if (!product.getModel().equals(Model.UNKNOWN_AIRCRAFT)) {
                 VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(mReceivedVideoDataCallBack);
             }
@@ -187,6 +192,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     public void onResume() {
         Log.e(TAG, "onResume");
         super.onResume();
+        DJIVideoStreamDecoder.getInstance().resume();
         initPreviewer();
         initFlightController();
         onProductChange();
@@ -215,6 +221,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
 
     @Override
     public void onPause() {
+        DJIVideoStreamDecoder.getInstance().stop();
         super.onPause();
     }
     @Override
@@ -226,6 +233,8 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     }
     @Override
     protected void onDestroy() {
+        DJIVideoStreamDecoder.getInstance().destroy();
+        NativeHelper.getInstance().release();
         super.onDestroy();
     }
     @Override
@@ -308,17 +317,33 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
 
     private void initUI() {
         // init mVideoSurface
-        mVideoSurface = (TextureView)findViewById(R.id.video_previewer_surface);
+        mVideoSurface = (SurfaceView) findViewById(R.id.video_previewer_surface);
         mTakeOffBtn = (Button) findViewById(R.id.btn_take_off);
         mLandBtn = (Button) findViewById(R.id.btn_land);
         mScreenJoystickRight = (OnScreenJoystick)findViewById(R.id.directionJoystickRight);
         mScreenJoystickLeft = (OnScreenJoystick)findViewById(R.id.directionJoystickLeft);
         mTextView = (TextView) findViewById(R.id.flightControllerData_tv);
+        mVideoSurfaceHolder = mVideoSurface.getHolder();
+
+        mVideoSurfaceHolder.addCallback(new SurfaceHolder.Callback(){
+            @Override
+            public void surfaceCreated(SurfaceHolder holder) {
+                DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), mVideoSurfaceHolder.getSurface());
+                DJIVideoStreamDecoder.getInstance().setYuvDataListener(MainActivity.this);
+            }
+
+            @Override
+            public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
+                DJIVideoStreamDecoder.getInstance().changeSurface(holder.getSurface());
+            }
+
+            @Override
+            public void surfaceDestroyed(SurfaceHolder holder) {
+
+            }
+        });
 
 
-        if (null != mVideoSurface) {
-            mVideoSurface.setSurfaceTextureListener(this);
-        }
 
         mTakeOffBtn.setOnClickListener(this);
         mLandBtn.setOnClickListener(this);
