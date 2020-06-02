@@ -5,6 +5,8 @@ import android.content.Context;
 import android.content.Intent;
 import android.graphics.SurfaceTexture;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -14,8 +16,6 @@ import android.widget.Button;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.dji.videostreamdecodingsample.media.DJIVideoStreamDecoder;
-import com.dji.videostreamdecodingsample.media.NativeHelper;
 
 import java.util.Timer;
 import java.util.TimerTask;
@@ -23,6 +23,7 @@ import java.util.TimerTask;
 import dji.common.flightcontroller.virtualstick.FlightControlData;
 import dji.common.product.Model;
 import dji.common.util.CommonCallbacks;
+import dji.midware.media.DJIVideoDecoder;
 import dji.sdk.base.BaseProduct;
 import dji.sdk.camera.Camera;
 import dji.sdk.camera.VideoFeeder;
@@ -37,6 +38,8 @@ import org.ros.android.RosActivity;
 import org.ros.node.NodeConfiguration;
 import org.ros.node.NodeMainExecutor;
 
+import com.dji.videostreamdecodingsample.media.DJIVideoStreamDecoder;
+import com.dji.videostreamdecodingsample.media.NativeHelper;
 
 public class MainActivity extends RosActivity implements TextureView.SurfaceTextureListener, View.OnClickListener, DJIVideoStreamDecoder.IYuvDataListener {
 
@@ -59,6 +62,11 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     private float mYaw;
     private float mThrottle;
 
+    private TextureView videostreamPreviewTtView;
+
+    private HandlerThread backgroundHandlerThread;
+    public Handler backgroundHandler;
+
     protected DJICodecManager mCodecManager = null;
 
     private Talker talker;
@@ -78,16 +86,28 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
         super.onCreate(savedInstanceState);
 
         NativeHelper.getInstance().init();
+        Log.e(TAG, "native helper inited");
 
         setContentView(R.layout.activity_main);
+
+        backgroundHandlerThread = new HandlerThread("background handler thread");
+        Log.d(TAG, "background handler created");
+        backgroundHandlerThread.start();
+        backgroundHandler = new Handler(backgroundHandlerThread.getLooper());
+
         initUI();
+        initPreviewer();
+
+
         // The callback for receiving the raw H264 video data for camera live view
         mReceivedVideoDataCallBack = new VideoFeeder.VideoDataCallback() {
             @Override
             public void onReceive(byte[] videoBuffer, int size) {
-                if (mCodecManager != null) {
-                    mCodecManager.sendDataToDecoder(videoBuffer, size);
-                }
+                Log.d(TAG, "camera recv video data size: " + size);
+                //if (mCodecManager != null) {
+                //    mCodecManager.sendDataToDecoder(videoBuffer, size);
+                //}
+                DJIVideoStreamDecoder.getInstance().parse(videoBuffer, size);
             }
         };
     }
@@ -142,24 +162,55 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     }
 
     private void initPreviewer() {
+
         product = ConnectionActivity.mProduct;
         if (product == null || !product.isConnected()) {
             Toast.makeText(this, getString(R.string.disconnected), Toast.LENGTH_SHORT).show();
         } else {
             DJIVideoStreamDecoder.getInstance().resume();
+            Toast.makeText(this, "Video Decoder Resumed", Toast.LENGTH_LONG).show();
             if (!product.getModel().equals(Model.UNKNOWN_AIRCRAFT)) {
                 VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(mReceivedVideoDataCallBack);
             }
         }
+
+        Log.d(TAG, "onInitPreviewer");
+        videostreamPreviewTtView.setSurfaceTextureListener(new TextureView.SurfaceTextureListener() {
+            @Override
+            public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
+                Log.d(TAG, "SurfaceTextureAvailable");
+                if (mCodecManager == null) {
+                    mCodecManager = new DJICodecManager(getApplicationContext(), surface, width, height);
+                }
+            }
+
+            @Override
+            public void onSurfaceTextureSizeChanged(SurfaceTexture surface, int width, int height) {
+
+            }
+
+            @Override
+            public boolean onSurfaceTextureDestroyed(SurfaceTexture surface) {
+                if (mCodecManager != null) mCodecManager.cleanSurface();
+                return false;
+            }
+
+            @Override
+            public void onSurfaceTextureUpdated(SurfaceTexture surfaceTexture) {
+
+            }
+        });
     }
     private void uninitPreviewer() {
         Camera camera = product.getCamera();
         if (camera != null){
             // Reset the callback
             VideoFeeder.getInstance().getPrimaryVideoFeed().setCallback(null);
+            Toast.makeText(this, "Video Feed paused", Toast.LENGTH_SHORT).show();
 
         }
     }
+
 
     @Override
     public void onResume() {
@@ -290,19 +341,26 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
 
     private void initUI() {
         // init mVideoSurface
+        Log.d(TAG, "onInitUI");
         mVideoSurface = (SurfaceView) findViewById(R.id.video_previewer_surface);
         mTakeOffBtn = (Button) findViewById(R.id.btn_take_off);
         mLandBtn = (Button) findViewById(R.id.btn_land);
-        mScreenJoystickRight = (OnScreenJoystick)findViewById(R.id.directionJoystickRight);
-        mScreenJoystickLeft = (OnScreenJoystick)findViewById(R.id.directionJoystickLeft);
+        //mScreenJoystickRight = (OnScreenJoystick)findViewById(R.id.directionJoystickRight);
+        //mScreenJoystickLeft = (OnScreenJoystick)findViewById(R.id.directionJoystickLeft);
         mTextView = (TextView) findViewById(R.id.flightControllerData_tv);
         mVideoSurfaceHolder = mVideoSurface.getHolder();
 
+        videostreamPreviewTtView = (TextureView) findViewById(R.id.livestream_preview_ttv);
+        mVideoSurface.setVisibility(View.VISIBLE);
+        videostreamPreviewTtView.setVisibility(View.GONE);
         mVideoSurfaceHolder.addCallback(new SurfaceHolder.Callback(){
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
+                Log.d(TAG, "Surface created");
                 DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), mVideoSurfaceHolder.getSurface());
+                Log.d(TAG, "after DJIVideoDecoder Init");
                 DJIVideoStreamDecoder.getInstance().setYuvDataListener(MainActivity.this);
+                Log.d(TAG, "after set yuvDataListener");
             }
 
             @Override
@@ -320,6 +378,9 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
 
         mTakeOffBtn.setOnClickListener(this);
         mLandBtn.setOnClickListener(this);
+
+        //TODO RECOLOCAR JOYSTICKS
+        /*
         mScreenJoystickLeft.setJoystickListener(new OnScreenJoystickListener(){
             @Override
             public void onTouch(OnScreenJoystick joystick, float pX, float pY) {
@@ -360,6 +421,8 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
                 }
             }
         });
+
+         */
     }
 
     @Override

@@ -4,13 +4,24 @@
     android:layout_height="match_parent"
     android:orientation="vertical">
 
+    <TextureView
+        android:id="@+id/livestream_preview_ttv"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_centerInParent="true"
+        android:layout_gravity="center"
+        android:alpha="50"
+        android:visibility="visible"/>
+
     <SurfaceView
         android:id="@+id/video_previewer_surface"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_gravity="center"
         android:layout_centerHorizontal="true"
-        android:layout_above="@+id/linearLayout" />
+        android:layout_above="@+id/linearLayout"
+        android:visibility="gone"/>
+
 
     <TextView
         android:id="@+id/flightControllerData_tv"
