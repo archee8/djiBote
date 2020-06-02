@@ -3,8 +3,12 @@ package com.ielson.djiBote;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.graphics.ImageFormat;
+import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
+import android.graphics.YuvImage;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.util.Log;
@@ -17,6 +21,11 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.util.Timer;
 import java.util.TimerTask;
 
@@ -333,10 +342,41 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
                             + DJIVideoStreamDecoder.getInstance().frameIndex
                             + ",array length: "
                             + bytes.length);
-            //screenShot(bytes, Environment.getExternalStorageDirectory() + "/DJI_ScreenShot");
+            screenShot(bytes, Environment.getExternalStorageDirectory() + "/DJI_ScreenShot");
         }
     }
 
+    private void screenShot(byte[] buf, String shotDir) {
+        File dir = new File(shotDir);
+        if (!dir.exists() || !dir.isDirectory()) {
+            dir.mkdirs();
+        }
+        YuvImage yuvImage = new YuvImage(buf,
+                ImageFormat.NV21,
+                DJIVideoStreamDecoder.getInstance().width,
+                DJIVideoStreamDecoder.getInstance().height,
+                null);
+        OutputStream outputFile;
+        final String path = dir + "/ScreenShot_" + System.currentTimeMillis() + ".jpg";
+        try {
+            outputFile = new FileOutputStream(new File(path));
+        } catch (FileNotFoundException e) {
+            Log.e(TAG, "test screenShot: new bitmap output file error: " + e);
+            return;
+        }
+        if (outputFile != null) {
+            yuvImage.compressToJpeg(new Rect(0,
+                    0,
+                    DJIVideoStreamDecoder.getInstance().width,
+                    DJIVideoStreamDecoder.getInstance().height), 100, outputFile);
+        }
+        try {
+            outputFile.close();
+        } catch (IOException e) {
+            Log.e(TAG, "test screenShot: compress yuv image error: " + e);
+            e.printStackTrace();
+        }
+    }
 
 
     private void initUI() {
@@ -430,6 +470,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
         switch (v.getId()) {
             case R.id.btn_take_off:
                 Toast.makeText(this, "Take off pressed", Toast.LENGTH_SHORT).show();
+                DJIVideoStreamDecoder.getInstance().changeSurface(null);
                 if (mFlightController != null){
                     Toast.makeText(this, "Flight controller not null", Toast.LENGTH_SHORT).show();
                     mFlightController.startTakeoff(
