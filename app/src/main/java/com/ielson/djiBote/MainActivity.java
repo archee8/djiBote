@@ -157,14 +157,16 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
             @Override
             public void surfaceCreated(SurfaceHolder holder) {
                 Log.d(TAG, "Real Surface created");
-                DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), mVideoPreviewSurfaceHolder.getSurface());
+                //DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), mVideoPreviewSurfaceHolder.getSurface());
+                DJIVideoStreamDecoder.getInstance().init(getApplicationContext(),null);
                 DJIVideoStreamDecoder.getInstance().setYuvDataListener(MainActivity.this);
                 Log.d(TAG, "Callback gor YuvDataListener Set");
             }
 
             @Override
             public void surfaceChanged(SurfaceHolder holder, int format, int width, int height) {
-                DJIVideoStreamDecoder.getInstance().changeSurface(holder.getSurface());
+                Log.d(TAG, "surface: about to change");
+                //DJIVideoStreamDecoder.getInstance().changeSurface(holder.getSurface());
             }
 
             @Override
@@ -312,6 +314,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     @Override
     public void onYuvDataReceived(byte[] yuvFrame, int width, int height) {
         Log.e(TAG, "onYuvDataReceived");
+        Toast.makeText(this, "YUV DATA", Toast.LENGTH_SHORT).show();
         //In this demo, we test the YUV data by saving it into JPG files.
         if (DJIVideoStreamDecoder.getInstance().frameIndex % 30 == 0) {
             byte[] y = new byte[width * height];
@@ -447,6 +450,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
                 Toast.makeText(this, "Take off pressed", Toast.LENGTH_SHORT).show();
                 // this is here so when tke off is presssed it stats sending the YUV images, cause the surface needs to be null to it work.
                 // just used the takeoff button as a test
+                Log.d(TAG, "Take off pressed");
                 DJIVideoStreamDecoder.getInstance().changeSurface(null);
                 if (mFlightController != null){
                     mFlightController.startTakeoff(

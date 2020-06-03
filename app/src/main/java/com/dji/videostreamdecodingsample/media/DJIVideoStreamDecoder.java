@@ -58,7 +58,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
     private static HandlerThread handlerThreadNew = new HandlerThread("native parser thread");
     private static Handler handlerNew;
 
-    private final boolean DEBUG = false;
+    private final boolean DEBUG = true;
 
     private static DJIVideoStreamDecoder instance;
 
@@ -206,10 +206,25 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
      * should set "null" surface when calling the "configure" method of MediaCodec.
      */
     public void init(Context context, Surface surface) {
+        try {
+            logd("surface: type " + surface.toString());
+        }
+        catch(Exception e) {
+            logd("surface: type none");
+        }
+        logd("DjiVideoStream init");
         this.context = context;
         this.surface = surface;
+        try {
+            logd("surface: type this " + this.surface.toString());
+        }
+        catch(Exception e) {
+            logd("surface: type this none");
+        }
         NativeHelper.getInstance().setDataListener(this);
+        logd("DjiVideoStream init codec");
         if (dataHandler != null && !dataHandler.hasMessages(MSG_INIT_CODEC)) {
+            logd("sending msg_init_codec");
             dataHandler.sendEmptyMessage(MSG_INIT_CODEC);
         }
     }
@@ -377,16 +392,25 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
      * Initialize the hardware decoder.
      */
     private void initCodec() {
+        logd("inside initCodec");
         if (width == 0 || height == 0) {
+            logd("width or height == 0");
             return;
         }
         if (codec != null) {
+            logd("codec not null");
             releaseCodec();
         }
         loge("initVideoDecoder----------------------------------------------------------");
         loge("initVideoDecoder video width = " + width + "  height = " + height);
         // create the media format
         MediaFormat format = MediaFormat.createVideoFormat(VIDEO_ENCODING_FORMAT, width, height);
+        try {
+            logd("surface: " + surface.toString());
+        }
+        catch(Exception e) {
+            logd("surface: none");
+        }
         if (surface == null) {
             logd("initVideoDecoder: yuv output");
             // The surface is null, which means that the yuv data is needed, so the color format should
@@ -440,6 +464,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
             public void handleMessage(Message msg) {
                 switch (msg.what) {
                     case MSG_INIT_CODEC:
+                        logd("msg_init_codec");
                         try {
                             initCodec();
                         } catch (Exception e) {
@@ -451,6 +476,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                         sendEmptyMessageDelayed(MSG_DECODE_FRAME, 1);
                         break;
                     case MSG_FRAME_QUEUE_IN:
+                        logd("msg_frame_queue_in");
                         try {
                             onFrameQueueIn(msg);
                         } catch (Exception e) {
@@ -463,6 +489,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                         }
                         break;
                     case MSG_DECODE_FRAME:
+                        logd("msg_decode_frame");
                         try {
                             decodeFrame();
                         } catch (Exception e) {
@@ -478,7 +505,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
                         }
                         break;
                     case MSG_CHANGE_SURFACE:
-
+                        logd("msg_change_surface");
                         break;
                     default:
                         break;
@@ -521,7 +548,14 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
      * @param surface
      */
     public void changeSurface(Surface surface) {
+        logd("surface: to change:" +surface.toString());
         this.surface = surface;
+        try {
+            logd("surface: changed " + surface.toString());
+        }
+        catch (Exception e){
+            logd("surface: changed null");
+        }
         if (dataHandler != null && !dataHandler.hasMessages(MSG_INIT_CODEC)) {
             dataHandler.sendEmptyMessage(MSG_INIT_CODEC);
         }
@@ -748,6 +782,7 @@ public class DJIVideoStreamDecoder implements NativeHelper.NativeDataListener {
         }
         if (data.length != size) {
             loge( "recv data size: " + size + ", data lenght: " + data.length);
+            Log.d(TAG, "TESTE");
         } else {
             logd( "recv data size: " + size + ", frameNum: "+frameNum+", isKeyframe: "+isKeyFrame+"," +
                     " width: "+width+", height: " + height);
