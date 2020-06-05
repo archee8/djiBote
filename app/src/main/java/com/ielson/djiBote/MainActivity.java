@@ -160,7 +160,7 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
                 //DJIVideoStreamDecoder.getInstance().init(getApplicationContext(), mVideoPreviewSurfaceHolder.getSurface());
                 DJIVideoStreamDecoder.getInstance().init(getApplicationContext(),null);
                 DJIVideoStreamDecoder.getInstance().setYuvDataListener(MainActivity.this);
-                Log.d(TAG, "Callback gor YuvDataListener Set");
+                Log.d(TAG, "Callback for YuvDataListener Set");
             }
 
             @Override
@@ -314,15 +314,22 @@ public class MainActivity extends RosActivity implements TextureView.SurfaceText
     @Override
     public void onYuvDataReceived(byte[] yuvFrame, int width, int height) {
         Log.e(TAG, "onYuvDataReceived");
+        Log.d(TAG, "Yuv Data Frame size: " + yuvFrame.length);
         Toast.makeText(this, "YUV DATA", Toast.LENGTH_SHORT).show();
         //In this demo, we test the YUV data by saving it into JPG files.
+        // entender esse mod 30 aí, nao é sempre que entra, será que é uma foto/seg, acho que é
         if (DJIVideoStreamDecoder.getInstance().frameIndex % 30 == 0) {
             byte[] y = new byte[width * height];
+            // acho que tá dividindo por 4 pra reduzir a banda dos componentes de cor
             byte[] u = new byte[width * height / 4];
             byte[] v = new byte[width * height / 4];
             byte[] nu = new byte[width * height / 4]; //
             byte[] nv = new byte[width * height / 4];
+            // copia o yuv para o y, só vai até o length do y, o que vem depois? acho que nao é o
+            // u e v só se eles já vem com menos canais, porque no teste aqui foi:Yuv Data Frame size: 1179648
+            //Y size:786432
             System.arraycopy(yuvFrame, 0, y, 0, y.length);
+            Log.d(TAG, "Y size:" + y.length);
             for (int i = 0; i < u.length; i++) {
                 v[i] = yuvFrame[y.length + 2 * i];
                 u[i] = yuvFrame[y.length + 2 * i + 1];
